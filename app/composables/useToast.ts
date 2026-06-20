@@ -1,36 +1,53 @@
-export type ToastType = 'success' | 'error' | 'info'
+import { ref } from 'vue'
 
-export type ToastMessage = {
-  id: string
-  type: ToastType
-  title: string
+// Typage d'une notification
+export interface Notification {
+  id: number
+  type: 'success' | 'error' | 'info' | 'warning'
   message: string
 }
 
-const DEFAULT_DURATION = 4500
+// État global partagé par toute l'application
+const notifications = ref<Notification[]>([])
+let counter = 0
 
 export const useToast = () => {
-  const toasts = useState<ToastMessage[]>('toast-messages', () => [])
 
-  const removeToast = (id: string) => {
-    toasts.value = toasts.value.filter((toast) => toast.id !== id)
+  /**
+   * Ajoute une notification à l'écran
+   */
+  const addNotification = (message: string, type: Notification['type'] = 'info', duration = 4000) => {
+    const id = counter++
+    
+    // On ajoute la nouvelle alerte au tableau
+    notifications.value.push({ id, type, message })
+
+    // On la supprime automatiquement après la durée spécifiée
+    setTimeout(() => {
+      removeNotification(id)
+    }, duration)
   }
 
-  const pushToast = (type: ToastType, title: string, message: string) => {
-    const id = `toast-${Date.now()}-${Math.random().toString(16).slice(2)}`
-    toasts.value.push({ id, type, title, message })
-    setTimeout(() => removeToast(id), DEFAULT_DURATION)
+  /**
+   * Supprime manuellement une notification (ex: clic sur une croix)
+   */
+  const removeNotification = (id: number) => {
+    notifications.value = notifications.value.filter(n => n.id !== id)
   }
 
-  const success = (message: string, title = 'Succès') => pushToast('success', title, message)
-  const error = (message: string, title = 'Erreur') => pushToast('error', title, message)
-  const info = (message: string, title = 'Info') => pushToast('info', title, message)
+  // Raccourcis pratiques
+  const showSuccess = (message: string, duration?: number) => addNotification(message, 'success', duration)
+  const showError = (message: string, duration?: number) => addNotification(message, 'error', duration)
+  const showWarning = (message: string, duration?: number) => addNotification(message, 'warning', duration)
+  const showInfo = (message: string, duration?: number) => addNotification(message, 'info', duration)
 
   return {
-    toasts,
-    success,
-    error,
-    info,
-    removeToast,
+    notifications,
+    addNotification,
+    removeNotification,
+    showSuccess,
+    showError,
+    showWarning,
+    showInfo
   }
 }

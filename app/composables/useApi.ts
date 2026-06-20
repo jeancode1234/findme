@@ -1,172 +1,40 @@
-import { useToast } from "./useToast";
-import { useLogger } from "./useLogger";
-import { BusinessError, TechnicalError } from "./errors";
-
-type ApiRequestOptions = RequestInit & {
-  body?: unknown;
-};
-
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
+// composables/useApi.ts
 export const useApi = () => {
-  const toast = useToast();
-  const logger = useLogger();
+  const config = useRuntimeConfig()
+  const authToken = useCookie('findme_token') // Stockage sécurisé de la session demandé par le CDC [cite: 38]
 
-  const interceptRequest = (url: string, options: ApiRequestOptions) => {
-    const intercepted = {
-      url,
-      options: {
-        ...options,
-        headers: {
-          "Content-Type": "application/json",
-          ...(options.headers as Record<string, string>),
-        },
-      },
-    };
-
-    logger.info("Intercepteur de requête", {
-      url: intercepted.url,
-      method: intercepted.options.method ?? "GET",
-    });
-
-    return intercepted;
-  };
-
-  const interceptResponse = async <T>(
-    response: Response,
-    url: string,
-  ): Promise<T> => {
-    if (response.ok) {
-      const data = await response.json().catch(() => null);
-
-      logger.info("Intercepteur de réponse réussie", {
-        url,
-        status: response.status,
-        data,
-      });
-
-      return data as T;
+  const fetchWithAuth = async <T>(url: string, options: any = {}): Promise<T> => {
+    // Fusion des headers
+    options.headers = {
+      'Content-Type': 'application/json',
+      ...options.headers,
     }
 
-    const json = await response.json().catch(() => null);
-
-    const message = json?.message || `Erreur serveur ${response.status}`;
-
-    logger.warn("Intercepteur de réponse en erreur", {
-      url,
-      status: response.status,
-      body: json,
-    });
-
-    throw new TechnicalError(message);
-  };
-
-  const handleError = (error: unknown): never => {
-    const message =
-      error instanceof Error ? error.message : "Erreur technique inconnue.";
-
-    const isBusinessError = error instanceof BusinessError;
-
-    const isTechnicalError =
-      error instanceof TechnicalError ||
-      /network|fetch|timeout|502|503|504|ECONNREFUSED/i.test(message);
-
-    if (isBusinessError) {
-      logger.warn("Exception métier interceptée", {
-        message,
-      });
-
-      toast.error(message);
-    } else if (isTechnicalError) {
-      logger.error("Exception technique interceptée", {
-        message,
-        error,
-      });
-
-      toast.error(
-        "Une erreur technique est survenue. Vérifiez votre connexion et réessayez.",
-      );
-    } else {
-      logger.error("Erreur inconnue interceptée", {
-        message,
-        error,
-      });
-
-      toast.error(message);
+    // Ajout automatique du Token JWT si disponible [cite: 1]
+    if (authToken.value) {
+      options.headers['Authorization'] = `Bearer ${authToken.value}`
     }
-
-    throw error;
-  };
-
-  const fakeAuthRequest = async <T>(
-    url: string,
-    options: ApiRequestOptions,
-  ): Promise<T> => {
-    await delay(500);
-
-    const payload = options.body ? JSON.parse(options.body as string) : {};
-
-    if (url === "/auth/register") {
-      if (!payload.name || !payload.email || !payload.password) {
-        throw new BusinessError(
-          "Tous les champs sont requis pour l’inscription.",
-        );
-      }
-
-      return {
-        id: String(Date.now()),
-        name: payload.name,
-        email: payload.email,
-        token: "fake-jwt-token",
-      } as T;
-    }
-
-    if (url === "/auth/login") {
-      if (!payload.email || !payload.password) {
-        throw new BusinessError(
-          "Veuillez renseigner l'email et le mot de passe.",
-        );
-      }
-
-      return {
-        id: "1",
-        name: "Utilisateur findMe",
-        email: payload.email,
-        token: "fake-jwt-token",
-      } as T;
-    }
-
-    throw new TechnicalError(`Point de terminaison introuvable : ${url}`);
-  };
-
-  const request = async <T>(
-    url: string,
-    options: ApiRequestOptions = {},
-  ): Promise<T> => {
-    const intercepted = interceptRequest(url, options);
 
     try {
-      if (url.startsWith("/auth/")) {
-        return await fakeAuthRequest<T>(intercepted.url, intercepted.options);
+      return await $fetch<T>(`${config.public.apiBaseUrl}${url}`, options)
+    } catch (error: any) {
+      // Gestion centralisée des états d'erreurs demandée par le Directeur Technique [cite: 23, 31, 33]
+      if (!navigator.onLine || error.status === 503) {
+        error.customMessage = "Le service est temporairement indisponible. Vérifiez votre connexion internet." [cite: 39]
+      } else if (error.status === 401) {
+        error.customMessage = "Votre session a expiré. Veuillez vous reconnecter."
+        authToken.value = null // Nettoyage
+      } else {
+        error.customMessage = error.data?.error?.message || "Une erreur inattendue est survenue." [cite: 39]
       }
-
-      const response = await fetch(intercepted.url, intercepted.options);
-
-      return await interceptResponse<T>(response, intercepted.url);
-    } catch (error) {
-      return handleError(error);
+      throw error
     }
-  };
-
-  const post = async <T>(url: string, body: unknown): Promise<T> => {
-    return await request<T>(url, {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
-  };
+  }
 
   return {
-    request,
-    post,
-  };
-};
+    get: <T>(url: string, options = {}) => fetchWithAuth<T>(url, { ...options, method: 'GET' }),
+    post: <T>(url: string, body: any, options = {}) => fetchWithAuth<T>(url, { ...options, method: 'POST', body }),
+    put: <T>(url: string, body: any, options = {}) => fetchWithAuth<T>(url, { ...options, method: 'PUT', body }),
+    delete: <T>(url: string, options = {}) => fetchWithAuth<T>(url, { ...options, method: 'DELETE' }),
+  }
+}

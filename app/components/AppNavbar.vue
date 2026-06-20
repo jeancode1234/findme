@@ -1,9 +1,9 @@
 <template>
-  <header class="bg-white border-b border-slate-100 shadow-sm font-poppins sticky top-0 z-50">
+  <header
+    class="bg-white border-b border-slate-100 shadow-sm font-poppins sticky top-0 z-50"
+  >
     <div class="max-w-7xl mx-auto px-6">
       <div class="h-20 flex items-center justify-between">
-
-        <!-- Logo -->
         <NuxtLink to="/" class="flex items-center">
           <img
             src="/images/logo-findme.png"
@@ -12,12 +12,8 @@
           />
         </NuxtLink>
 
-        <!-- Navigation Desktop -->
         <ul class="hidden lg:flex items-center gap-10">
-          <li
-            v-for="menu in menus"
-            :key="menu.to"
-          >
+          <li v-for="menu in menus" :key="menu.to">
             <NuxtLink
               :to="menu.to"
               class="relative text-[15px] font-semibold transition-all duration-300"
@@ -37,10 +33,7 @@
           </li>
         </ul>
 
-        <!-- Actions Desktop -->
         <div class="hidden lg:flex items-center gap-4">
-
-          <!-- Langue -->
           <button
             class="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-xl text-[#082F5A] font-medium hover:bg-slate-50 transition"
           >
@@ -82,15 +75,16 @@
               />
             </svg>
           </button>
-
-          <!-- Get Started -->
-          <NuxtLink v-if="isAuthenticated"
+           <p class="text-sm text-gray-600 font-poppins">{{ auth.user.value?.email }}</p>
+          <NuxtLink
+            v-if="auth.user.value?.role=='user'"
             to="/dashboard"
             class="px-6 py-2 rounded-full bg-[#203B51] text-white font-poppins shadow-md hover:bg-[#005230] transition"
           >
             Dashboard
           </NuxtLink>
-          <NuxtLink v-else
+          <NuxtLink
+            v-else
             to="/auth/login"
             class="px-6 py-2 rounded-full bg-[#203B51] text-white font-poppins shadow-md hover:bg-[#005230] transition"
           >
@@ -98,11 +92,7 @@
           </NuxtLink>
         </div>
 
-        <!-- Bouton Mobile -->
-        <button
-          class="lg:hidden"
-          @click="mobileMenuOpen = !mobileMenuOpen"
-        >
+        <button class="lg:hidden" @click="mobileMenuOpen = !mobileMenuOpen">
           <svg
             v-if="!mobileMenuOpen"
             xmlns="http://www.w3.org/2000/svg"
@@ -135,47 +125,40 @@
             />
           </svg>
         </button>
-
       </div>
     </div>
 
-    <!-- Menu Mobile -->
-     <MobileNavbar :closeMenu="closeMenu" :mobileMenuOpen="mobileMenuOpen" :menus="menus"/>
+    <MobileNavbar
+      :closeMenu="closeMenu"
+      :mobileMenuOpen="mobileMenuOpen"
+      :menus="menus"
+    />
   </header>
 </template>
 
-<script setup>
-import { useRoute } from 'vue-router'
-import { useAuth } from '@/composables/useAuth'
+<script setup lang="ts">
+import { ref, computed } from "vue"; // 🌟 Correction 1 : Import explicite de ref et computed
+import { useRoute } from "vue-router";
+import { useAuth } from "@/composables/useAuth";
+
 const route = useRoute();
-const {isAuthenticated} = useAuth();
+const auth = useAuth();
 
-const mobileMenuOpen = ref(false)
+// 🌟 Correction 2 : Remplacement de isAuthenticated inexistant par une propriété calculée basée sur auth.user
+// const isAuthenticated = computed(() => !!auth.user.value);
 
+const mobileMenuOpen = ref(false);
+
+// 🌟 Correction 3 : Une vraie fonction de fermeture pour l'enfant MobileNavbar
 const closeMenu = () => {
-  mobileMenuOpen.value = !mobileMenuOpen.value
-}
+  mobileMenuOpen.value = false;
+};
 
 const menus = [
-  {
-    label: "Accueil",
-    to: "/",
-  },
-  {
-    label: "Fonctionnalités",
-    to: "/fonctionnalites",
-  },
-  {
-    label: "Comment ça marche",
-    to: "/comment-ca-marche",
-  },
-  {
-    label: "À propos",
-    to: "/a-propos",
-  },
-  {
-    label: "Support",
-    to: "/support",
-  },
-]
+  { label: "Accueil", to: "/" },
+  { label: "Fonctionnalités", to: "/fonctionnalites" },
+  { label: "Comment ça marche", to: "/comment-ca-marche" },
+  { label: "À propos", to: "/a-propos" },
+  { label: "Support", to: "/support" },
+];
 </script>

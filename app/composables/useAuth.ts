@@ -1,210 +1,146 @@
+// composables/useAuth.ts
 import { useApi } from "./useApi";
-
-export type AuthCredentials = {
-  email: string;
-  password: string;
-  remember?: boolean;
-};
-
-export type RegisterCredentials = {
-  name: string;
-  email: string;
-  password: string;
-};
-
-export type AuthUser = {
-  id: string;
-  name: string;
-  email: string;
-};
-
-export type AuthResponse = {
-  id: string;
-  name: string;
-  email: string;
-  token: string;
-};
+import { toast } from "vue-sonner";
+import { logger } from "~/utils/logger"; // Import de notre nouveau logger
 
 export const useAuth = () => {
   const api = useApi();
-  const tokenCookie = useCookie<string | null>("auth-token", {
-    sameSite: "lax",
+  const authToken = useCookie("findme_token", {
     maxAge: 60 * 60 * 24 * 7,
-  });
-  const userCookie = useCookie<string | null>("auth-user", {
+    path: "/",
     sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7,
   });
 
-  const user = useState<AuthUser | null>("auth-user", () => {
-    return userCookie.value ? JSON.parse(userCookie.value) : null;
-  });
+  const user = ref<UserProfile | null>(null);
+  const isLoading = ref(false);
+  const globalError = ref("");
+  const fieldErrors = ref<Record<string, string>>({});
 
-  const token = useState<string | null>("auth-token", () => tokenCookie.value ?? null);
+  /**
+   * Gestionnaire d'erreurs centralisé (Technique)
+   */
+  const handleApiError = (context: string, error: any) => {
+    // Utilisation du logger technique
+    logger.technical(context, error, "AUTH");
 
-  const restored = useState("auth-restored", () => false);
-
-  const loading = ref(false);
-
-  const error = ref<string | null>(null);
-
-  const errorType = ref<"business" | "technical" | null>(null);
-
-  const isAuthenticated = computed(() => !!token.value);
-
-  const restoreSession = () => {
-    if (!import.meta.client) {
-      return;
-    }
-
-    const savedToken = localStorage.getItem("auth-token") || tokenCookie.value;
-    const savedUser = localStorage.getItem("auth-user") || userCookie.value;
-
-    if (savedToken) {
-      token.value = savedToken;
-      tokenCookie.value = savedToken;
-
-      if (savedUser) {
-        try {
-          user.value = JSON.parse(savedUser);
-        } catch {
-          user.value = null;
-        }
-        userCookie.value = savedUser;
-      }
+    if (error.status === 422 && error.data?.error?.fields) {
+      fieldErrors.value = error.data.error.fields;
+      toast.error("Veuillez vérifier les champs du formulaire.");
+    } else {
+      globalError.value =
+        error.data?.error?.message || "Une erreur est survenue.";
+      toast.error(globalError.value);
     }
   };
 
-  const login = async ({
-    email,
-    password,
-    remember = false,
-  }: AuthCredentials) => {
-    loading.value = true;
-    error.value = null;
-    errorType.value = null;
-
+  /**
+   * Connexion
+   */
+  const login = async (payload: LoginPayload) => {
+    isLoading.value = true;
+    globalError.value = "";
+    fieldErrors.value = {};
     try {
-      const response = await api.post<AuthResponse>("/auth/login", {
-        email,
-        password,
-      });
+      const response = await api.post<AuthResponse>("/api/auth/login", payload);
+      if (response?.data?.token) {
+        authToken.value = response.data.token;
+        user.value = response.data.user;
 
-      token.value = response.token;
+        // LOG MÉTIER
+        logger.business("USER_LOGIN", {
+          userId: user.value.id,
+          email: payload.email,
+        });
 
-      user.value = {
-        id: response.id,
-        name: response.name,
-        email: response.email,
-      };
-
-      if (import.meta.client) {
-        if (token.value) {
-          localStorage.setItem("auth-token", token.value);
-          tokenCookie.value = token.value;
-        }
-
-        localStorage.setItem("auth-user", JSON.stringify(user.value));
-        userCookie.value = JSON.stringify(user.value);
-
-        if (remember) {
-          localStorage.setItem("auth-remember", "true");
-        } else {
-          localStorage.removeItem("auth-remember");
-        }
+        toast.success("Connexion réussie !");
+        return response.data.user.role;
       }
-
-      return user.value;
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : "Erreur de connexion.";
-
-      errorType.value =
-        err instanceof Error && err.name === "BusinessError"
-          ? "business"
-          : "technical";
-
-      throw err;
+      return null;
+    } catch (error: any) {
+      handleApiError("AuthLogin", error);
+      return null;
     } finally {
-      loading.value = false;
+      isLoading.value = false;
     }
   };
 
-  const register = async ({ name, email, password }: RegisterCredentials) => {
-    loading.value = true;
-    error.value = null;
-    errorType.value = null;
-
+  /**
+   * Inscription
+   */
+  const register = async (payload: RegisterPayload) => {
+    isLoading.value = true;
+    globalError.value = "";
+    fieldErrors.value = {};
     try {
-      const response = await api.post<AuthResponse>("/auth/register", {
-        name,
-        email,
-        password,
-      });
+      const response = await api.post<AuthResponse>(
+        "/api/auth/register",
+        payload,
+      );
+      if (response?.data?.token) {
+        authToken.value = response.data.token;
+        user.value = response.data.user;
 
-      token.value = response.token;
+        // LOG MÉTIER
+        logger.business("USER_REGISTER", {
+          userId: user.value.id,
+          email: payload.email,
+        });
 
-      user.value = {
-        id: response.id,
-        name: response.name,
-        email: response.email,
-      };
-
-      if (import.meta.client) {
-        if (token.value) {
-          localStorage.setItem("auth-token", token.value);
-          tokenCookie.value = token.value;
-        }
-
-        localStorage.setItem("auth-user", JSON.stringify(user.value));
-        userCookie.value = JSON.stringify(user.value);
+        toast.success("Bienvenue sur findMe !");
+        return response.data.user.role;
       }
-
-      return user.value;
-    } catch (err) {
-      error.value =
-        err instanceof Error
-          ? err.message
-          : "Erreur lors de la création du compte.";
-
-      errorType.value =
-        err instanceof Error && err.name === "BusinessError"
-          ? "business"
-          : "technical";
-
-      throw err;
+      return "user";
+    } catch (error: any) {
+      handleApiError("AuthRegister", error);
+      return null;
     } finally {
-      loading.value = false;
+      isLoading.value = false;
     }
   };
 
-  const logout = () => {
-    user.value = null;
-    token.value = null;
-    tokenCookie.value = null;
-    userCookie.value = null;
-
-    if (import.meta.client) {
-      localStorage.removeItem("auth-token");
-      localStorage.removeItem("auth-user");
-      localStorage.removeItem("auth-remember");
+  /**
+   * Récupération profil (me)
+   */
+  const me = async () => {
+    if (!authToken.value) return;
+    try {
+      const response = await api.get<MeResponse>("/api/auth/me");
+      if (response?.data?.user) user.value = response.data.user;
+    } catch (error: any) {
+      // Log technique spécifique
+      logger.technical("AuthMe", error, "AUTH");
+      authToken.value = null;
+      user.value = null;
     }
   };
 
-  if (import.meta.client && !restored.value) {
-    restoreSession();
-    restored.value = true;
-  }
+  /**
+   * Déconnexion
+   */
+  const logout = async () => {
+    try {
+      await api.post("/api/auth/logout");
+      // LOG MÉTIER
+      logger.business("USER_LOGOUT", { userId: user.value?.id });
+    } catch (error: any) {
+      logger.technical("AuthLogout", error, "AUTH");
+    } finally {
+      authToken.value = null;
+      user.value = null;
+      toast.info("Vous avez été déconnecté.");
+      navigateTo("/auth/login");
+    }
+  };
 
   return {
     user,
-    token,
-    loading,
-    error,
-    errorType,
-    isAuthenticated,
+    isLoading,
+    globalError,
+    fieldErrors,
     login,
     register,
+    me,
     logout,
-    restoreSession,
+    isAuthenticated: computed(() => !!authToken.value),
   };
 };

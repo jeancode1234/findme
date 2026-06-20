@@ -19,7 +19,7 @@ Ce dossier contient les middlewares Nuxt utilisés par l'application.
 Chaque page peut déclarer un middleware via `definePageMeta` :
 
 ```ts
-definePageMeta({ middleware: ['auth', 'logging'] })
+definePageMeta({ middleware: ["auth", "logging"] });
 ```
 
 ## Bonnes pratiques
@@ -27,3 +27,5 @@ definePageMeta({ middleware: ['auth', 'logging'] })
 - protéger les routes sensibles avec `auth`
 - ajouter `logging` pour suivre le parcours utilisateur
 - étendre ces middlewares si tu veux une gestion d'erreurs globale côté route
+
+Le middleware `role` (Autorisation) : Il vérifie CE QUE l'utilisateur a le droit de faire. Sa question est : "Maintenant que je sais qui tu es, as-tu le rôle ou la permission nécessaire pour voir cette page spécifique ?" (par exemple, être ADMIN).

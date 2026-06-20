@@ -1,83 +1,121 @@
-import { useAuth } from './useAuth'
-
-const emailOrPhonePattern = /^(?:[0-9+\s-]{7,}|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})$/
+import { computed, reactive, ref, watch } from "vue";
+import { useAuth } from "./useAuth";
 
 export const useLoginForm = () => {
-  const auth = useAuth()
-  const email = ref('')
-  const password = ref('')
-  const remember = ref(false)
-  const emailError = ref<string | null>(null)
-  const passwordError = ref<string | null>(null)
-  const formError = ref<string | null>(null)
+  const auth = useAuth();
 
-  const errorMessage = computed(() => formError.value || auth.error.value)
-  const isFormValid = computed(
-    () => !emailError.value && !passwordError.value && email.value.trim().length > 0 && password.value.length > 0
-  )
+  const email = ref("");
+  const password = ref("");
+  const remember = ref(false);
 
-  const validateEmailOrPhone = (value: string) => {
-    if (!value.trim()) {
-      return 'Ce champ est requis.'
+  const errorMessage = ref("");
+
+  const validationErrors = reactive<Record<string, string>>({});
+
+  const validateEmail = () => {
+    delete validationErrors.email;
+
+    if (!email.value.trim()) {
+      validationErrors.email = "L'email est obligatoire";
+      return;
     }
-    if (!emailOrPhonePattern.test(value.trim())) {
-      return 'Entrez un email ou un téléphone valide.'
-    }
-    return null
-  }
 
-  const validatePassword = (value: string) => {
-    if (!value) {
-      return 'Le mot de passe est requis.'
-    }
-    if (value.length < 8) {
-      return 'Le mot de passe doit contenir au moins 8 caractères.'
-    }
-    return null
-  }
+    const emailRegex =
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  const validateForm = () => {
-    emailError.value = validateEmailOrPhone(email.value)
-    passwordError.value = validatePassword(password.value)
-    formError.value = null
-    return !emailError.value && !passwordError.value
-  }
+    if (!emailRegex.test(email.value)) {
+      validationErrors.email =
+        "Adresse email invalide";
+    }
+  };
 
-  watch([email, password], () => {
-    validateForm()
-  })
+  const validatePassword = () => {
+    delete validationErrors.password;
+
+    if (!password.value.trim()) {
+      validationErrors.password =
+        "Le mot de passe est obligatoire";
+      return;
+    }
+
+    if (password.value.length < 6) {
+      validationErrors.password =
+        "Minimum 6 caractères";
+    }
+  };
+
+  const validate = () => {
+    validateEmail();
+    validatePassword();
+
+    return (
+      Object.keys(validationErrors).length === 0
+    );
+  };
+
+  watch(email, () => {
+    validateEmail();
+  });
+
+  watch(password, () => {
+    validatePassword();
+  });
+
+  const emailError = computed(
+    () => validationErrors.email || ""
+  );
+
+  const passwordError = computed(
+    () => validationErrors.password || ""
+  );
+
+  const isFormValid = computed(() => {
+    return (
+      email.value.trim() !== "" &&
+      password.value.trim() !== "" &&
+      Object.keys(validationErrors).length === 0
+    );
+  });
 
   const handleSubmit = async () => {
-    if (!validateForm()) {
-      formError.value = 'Merci de corriger les champs indiqués.'
-      return
+    errorMessage.value = "";
+
+    if (!validate()) {
+      return;
     }
 
     try {
       await auth.login({
-        email: email.value.trim(),
+        email: email.value,
         password: password.value,
         remember: remember.value,
-      })
-      formError.value = null
-    } catch (err) {
-      formError.value = auth.error.value || 'Erreur de connexion. Vérifiez vos identifiants.'
+      });
+
+      await navigateTo("/dashboard");
+    } catch (error) {
+      errorMessage.value =
+        auth.error.value ||
+        "Connexion impossible";
     }
-  }
+  };
 
   return {
     email,
     password,
     remember,
+
     emailError,
     passwordError,
-    formError,
-    loading: auth.loading,
+
     errorMessage,
+
+    loading: auth.loading,
+
+    isAuthenticated:
+      auth.isAuthenticated,
+
     isFormValid,
-    isAuthenticated: auth.isAuthenticated,
-    user: auth.user,
+
     handleSubmit,
-    logout: auth.logout,
-  }
-}
+  };
+};

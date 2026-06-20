@@ -1,158 +1,214 @@
-import { useAuth } from './useAuth'
-import { useLogger } from './useLogger'
-import { useToast } from './useToast'
-
-const emailOrPhonePattern = /^(?:[0-9+\s-]{7,}|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})$/
+import { computed, reactive, ref, watch } from "vue";
+import { useAuth } from "./useAuth";
+import { useToast } from "./useToast";
 
 export const useRegisterForm = () => {
-  const auth = useAuth()
-  const logger = useLogger()
-  const toast = useToast()
-  const fullName = ref('')
-  const email = ref('')
-  const password = ref('')
-  const confirmPassword = ref('')
-  const agreeTerms = ref(false)
-  const fullNameError = ref<string | null>(null)
-  const emailError = ref<string | null>(null)
-  const passwordError = ref<string | null>(null)
-  const confirmPasswordError = ref<string | null>(null)
-  const formError = ref<string | null>(null)
+  const auth = useAuth();
 
-  const errorMessage = computed(() => formError.value || auth.error.value)
+  const toast = useToast();
+
+  const name = ref("");
+
+  const email = ref("");
+
+  const password = ref("");
+
+  const confirmPassword = ref("");
+
+  const agreeTerms = ref(false);
+
+  const errorMessage = ref("");
+
+  const validationErrors = reactive<Record<string, string>>({});
+
+  const validateName = () => {
+    if (!name.value.trim()) {
+      validationErrors.name =
+        "Le nom est obligatoire";
+    } else {
+      delete validationErrors.name;
+    }
+  };
+
+  const validateEmail = () => {
+    if (!email.value.trim()) {
+      validationErrors.email =
+        "L'email est obligatoire";
+      return;
+    }
+
+    const regex =
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!regex.test(email.value)) {
+      validationErrors.email =
+        "Adresse email invalide";
+    } else {
+      delete validationErrors.email;
+    }
+  };
+
+  const validatePassword = () => {
+    if (!password.value.trim()) {
+      validationErrors.password =
+        "Le mot de passe est obligatoire";
+      return;
+    }
+
+    if (password.value.length < 6) {
+      validationErrors.password =
+        "Minimum 6 caractères";
+    } else {
+      delete validationErrors.password;
+    }
+  };
+
+  const validateConfirmPassword = () => {
+    if (!confirmPassword.value.trim()) {
+      validationErrors.confirmPassword =
+        "Confirmation obligatoire";
+      return;
+    }
+
+    if (
+      confirmPassword.value !==
+      password.value
+    ) {
+      validationErrors.confirmPassword =
+        "Les mots de passe ne correspondent pas";
+    } else {
+      delete validationErrors.confirmPassword;
+    }
+  };
+
+  const validateTerms = () => {
+    if (!agreeTerms.value) {
+      validationErrors.agreeTerms =
+        "Veuillez accepter les conditions";
+    } else {
+      delete validationErrors.agreeTerms;
+    }
+  };
+
+  const validate = () => {
+    validateName();
+
+    validateEmail();
+
+    validatePassword();
+
+    validateConfirmPassword();
+
+    validateTerms();
+
+    return (
+      Object.keys(validationErrors).length ===
+      0
+    );
+  };
+
+  /*
+   * Validation temps réel
+   */
+
+  watch(name, validateName);
+
+  watch(email, validateEmail);
+
+  watch(password, () => {
+    validatePassword();
+
+    validateConfirmPassword();
+  });
+
+  watch(
+    confirmPassword,
+    validateConfirmPassword,
+  );
+
+  watch(agreeTerms, validateTerms);
+
+  const handleSubmit =
+    async (): Promise<boolean> => {
+      errorMessage.value = "";
+
+      if (!validate()) {
+        return false;
+      }
+
+      try {
+        await auth.register({
+          name: name.value,
+          email: email.value,
+          password: password.value,
+        });
+
+        toast.success(
+          "Compte créé avec succès",
+        );
+
+        await navigateTo(
+          "/",
+        );
+
+        return true;
+      } catch (error) {
+        errorMessage.value =
+          auth.error.value ??
+          "Inscription impossible";
+
+        return false;
+      }
+    };
+
   const isFormValid = computed(
     () =>
-      !fullNameError.value &&
-      !emailError.value &&
-      !passwordError.value &&
-      !confirmPasswordError.value &&
-      fullName.value.trim().length > 0 &&
-      email.value.trim().length > 0 &&
-      password.value.length >= 8 &&
-      confirmPassword.value.length > 0 &&
-      agreeTerms.value
-  )
-
-  const validateFullName = (value: string) => {
-    if (!value.trim()) {
-      return 'Le nom complet est requis.'
-    }
-    return null
-  }
-
-  const validateEmailOrPhone = (value: string) => {
-    if (!value.trim()) {
-      return 'Ce champ est requis.'
-    }
-    if (!emailOrPhonePattern.test(value.trim())) {
-      return 'Entrez un email ou un téléphone valide.'
-    }
-    return null
-  }
-
-  const validatePassword = (value: string) => {
-    if (!value) {
-      return 'Le mot de passe est requis.'
-    }
-    if (value.length < 8) {
-      return 'Le mot de passe doit contenir au moins 8 caractères.'
-    }
-    return null
-  }
-
-  const validateConfirmPassword = (value: string) => {
-    if (!value) {
-      return 'Veuillez confirmer votre mot de passe.'
-    }
-    if (value !== password.value) {
-      return 'Les mots de passe ne correspondent pas.'
-    }
-    return null
-  }
-
-  const validateForm = () => {
-    fullNameError.value = validateFullName(fullName.value)
-    emailError.value = validateEmailOrPhone(email.value)
-    passwordError.value = validatePassword(password.value)
-    confirmPasswordError.value = validateConfirmPassword(confirmPassword.value)
-    formError.value = null
-
-    if (!agreeTerms.value) {
-      formError.value = 'Vous devez accepter les conditions d’utilisation.'
-      logger.warn('Validation formulaire échouée', {
-        field: 'agreeTerms',
-        agreeTerms: agreeTerms.value,
-      })
-    }
-
-    const isValid =
-      !fullNameError.value &&
-      !emailError.value &&
-      !passwordError.value &&
-      !confirmPasswordError.value &&
-      agreeTerms.value
-
-    if (!isValid) {
-      logger.info('Étape de validation du formulaire', {
-        fullNameError: fullNameError.value,
-        emailError: emailError.value,
-        passwordError: passwordError.value,
-        confirmPasswordError: confirmPasswordError.value,
-      })
-    }
-
-    return isValid
-  }
-
-  watch([fullName, email, password, confirmPassword, agreeTerms], () => {
-    validateForm()
-  })
-
-  const handleSubmit = async () => {
-    if (!validateForm()) {
-      if (!formError.value) {
-        formError.value = 'Merci de corriger les champs indiqués.'
-      }
-      return
-    }
-
-    try {
-      await auth.register({
-        name: fullName.value.trim(),
-        email: email.value.trim(),
-        password: password.value,
-      })
-      formError.value = null
-      toast.success('Votre compte a bien été créé. Vous êtes redirigé vers l’accueil.')
-      logger.info('Inscription réussie', { email: email.value })
-    } catch (err) {
-      const message = auth.error.value || 'Impossible de créer le compte. Vérifiez vos informations.'
-      formError.value = message
-
-      if (auth.errorType.value === 'business') {
-        logger.warn('Erreur métier lors de l’inscription', { message, email: email.value })
-      } else {
-        logger.error('Erreur technique lors de l’inscription', { message, error: err })
-      }
-    }
-  }
+      name.value.trim().length > 0 &&
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+        email.value,
+      ) &&
+      password.value.length >= 6 &&
+      confirmPassword.value ===
+        password.value &&
+      agreeTerms.value,
+  );
 
   return {
-    fullName,
+    name,
     email,
     password,
     confirmPassword,
     agreeTerms,
-    fullNameError,
-    emailError,
-    passwordError,
-    confirmPasswordError,
-    formError,
+
+    nameError: computed(
+      () => validationErrors.name,
+    ),
+
+    emailError: computed(
+      () => validationErrors.email,
+    ),
+
+    passwordError: computed(
+      () => validationErrors.password,
+    ),
+
+    confirmPasswordError: computed(
+      () =>
+        validationErrors.confirmPassword,
+    ),
+agreeTermsError: computed(
+      () =>
+        validationErrors.agreeTerms,
+    ),
     loading: auth.loading,
+
     errorMessage,
+
+    isAuthenticated:
+      auth.isAuthenticated,
+
     isFormValid,
-    isAuthenticated: auth.isAuthenticated,
-    user: auth.user,
+
     handleSubmit,
-  }
-}
+  };
+};
