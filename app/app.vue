@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import NotificationToast from './components/NotificationToast.vue'
 </script>
 
 <template>
   <div>
     <NuxtRouteAnnouncer />
     <NuxtPage />
-    <NotificationToast />
+  <Toaster position="top-right" richColors />
   </div>
 </template>

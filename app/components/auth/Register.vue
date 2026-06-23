@@ -1,136 +1,140 @@
 <template>
   <div
-    class="min-h-screen flex items-center justify-center p-6 bg-slate-50 dark:bg-slate-950"
+    class="min-h-screen grid grid-cols-1 lg:grid-cols-12 font-sans bg-white dark:bg-slate-900 transition-colors duration-200"
   >
     <div
-      class="w-full max-w-lg bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800"
+      class="hidden lg:flex lg:col-span-5 relative bg-slate-950 p-12 flex-col justify-between overflow-hidden"
     >
-      <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white mb-2">
-        Créer un compte
-      </h1>
-      <p class="text-slate-500 text-sm mb-8">
-        Rejoignez l'écosystème findMe en quelques étapes.
-      </p>
-
       <div
-        v-if="globalError"
-        class="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-sm text-red-600 rounded-xl"
-      >
-        {{ globalError }}
+        class="absolute inset-0 bg-[url('/images/urban-background.jpg')] bg-cover bg-center opacity-40 mix-blend-luminosity"
+      ></div>
+      <div
+        class="absolute inset-0 bg-gradient-to-b from-emerald-600/60 to-slate-950/90"
+      ></div>
+      <div class="relative z-10">
+        <NuxtLink
+          to="/"
+          class="text-2xl font-extrabold text-white flex items-center gap-2"
+        >
+          <span class="text-emerald-400">📍</span> findMe
+        </NuxtLink>
       </div>
+    </div>
 
-      <form @submit.prevent="onRegister" class="space-y-4">
-        <div>
-          <label class="text-xs font-bold text-slate-700 dark:text-slate-300"
-            >Nom complet</label
-          >
-          <input
-            v-model="form.name"
-            type="text"
-            required
-            class="w-full mt-1 p-3 rounded-xl border bg-slate-50 dark:bg-slate-800"
-            :class="fieldErrors.name ? 'border-red-500' : 'border-slate-200'"
-          />
-          <span
-            v-if="fieldErrors.name"
-            class="text-xs text-red-500 font-semibold"
-            >{{ fieldErrors.name }}</span
-          >
-        </div>
+    <div
+      class="col-span-1 lg:col-span-7 flex flex-col justify-center px-6 sm:px-16 lg:px-24 py-12"
+    >
+      <div class="w-full max-w-md mx-auto">
+        <h1 class="text-3xl font-extrabold text-slate-900 dark:text-white mb-2">
+          Créer un compte
+        </h1>
+        <p class="text-slate-500 text-sm mb-8">
+          Rejoignez findMe en quelques secondes.
+        </p>
 
-        <div>
-          <label class="text-xs font-bold text-slate-700 dark:text-slate-300"
-            >Adresse Email</label
-          >
-          <input
-            v-model="form.email"
-            type="email"
-            required
-            class="w-full mt-1 p-3 rounded-xl border bg-slate-50 dark:bg-slate-800"
-            :class="fieldErrors.email ? 'border-red-500' : 'border-slate-200'"
-          />
-          <span
-            v-if="fieldErrors.email"
-            class="text-xs text-red-500 font-semibold"
-            >{{ fieldErrors.email }}</span
-          >
-        </div>
+        <form @submit.prevent="onRegister" class="space-y-5">
+          <div>
+            <label class="text-xs font-bold text-slate-700 block mb-1"
+              >Nom complet</label
+            >
+            <input
+              v-model="form.name"
+              @input="clearError('name')"
+              @blur="validateField('name', form.name)"
+              type="text"
+              placeholder="John Doe"
+              class="w-full px-4 py-3.5 rounded-xl border bg-slate-50 border-slate-200 text-sm focus:ring-2 focus:ring-emerald-600 outline-none"
+              :class="{ 'border-red-500': fieldErrors.name }"
+            />
+            <p v-if="fieldErrors.name" class="text-xs text-red-500 mt-1">
+              {{ fieldErrors.name }}
+            </p>
+          </div>
 
-        <div>
-          <label class="text-xs font-bold text-slate-700 dark:text-slate-300"
-            >Mot de passe</label
-          >
-          <input
-            v-model="form.password"
-            type="password"
-            required
-            class="w-full mt-1 p-3 rounded-xl border bg-slate-50 dark:bg-slate-800"
-            :class="
-              fieldErrors.password ? 'border-red-500' : 'border-slate-200'
-            "
-          />
-          <span
-            v-if="fieldErrors.password"
-            class="text-xs text-red-500 font-semibold"
-            >{{ fieldErrors.password }}</span
-          >
-        </div>
+          <div>
+            <label class="text-xs font-bold text-slate-700 block mb-1"
+              >Email</label
+            >
+            <input
+              v-model="form.email"
+              @input="clearError('email')"
+              @blur="validateField('email', form.email)"
+              type="email"
+              placeholder="nom@exemple.com"
+              class="w-full px-4 py-3.5 rounded-xl border bg-slate-50 border-slate-200 text-sm focus:ring-2 focus:ring-emerald-600 outline-none"
+              :class="{ 'border-red-500': fieldErrors.email }"
+            />
+            <p v-if="fieldErrors.email" class="text-xs text-red-500 mt-1">
+              {{ fieldErrors.email }}
+            </p>
+          </div>
 
-        <BaseButton
-          type="submit"
-          :loading="isLoading"
-          class="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold mt-4"
-        >
-          S'inscrire maintenant
-        </BaseButton>
-      </form>
+          <div>
+            <label class="text-xs font-bold text-slate-700 block mb-1"
+              >Mot de passe</label
+            >
+            <input
+              v-model="form.password"
+              @input="clearError('password')"
+              @blur="validateField('password', form.password)"
+              type="password"
+              placeholder="••••••••"
+              class="w-full px-4 py-3.5 rounded-xl border bg-slate-50 border-slate-200 text-sm focus:ring-2 focus:ring-emerald-600 outline-none"
+              :class="{ 'border-red-500': fieldErrors.password }"
+            />
+            <p v-if="fieldErrors.password" class="text-xs text-red-500 mt-1">
+              {{ fieldErrors.password }}
+            </p>
+          </div>
 
-      <p class="text-center text-xs text-slate-500 mt-6">
-        Déjà membre ?
-        <NuxtLink to="/auth/login" class="text-emerald-600 font-bold"
-          >Connectez-vous</NuxtLink
-        >
-      </p>
+          <BaseButton
+            :loading="isLoading"
+            type="submit"
+            class="w-full bg-emerald-700 text-white rounded-xl py-3.5 font-bold"
+          >
+            S'inscrire ➔
+          </BaseButton>
+        </form>
+      </div>
     </div>
   </div>
 </template>
 
-<script setup>
-definePageMeta({ layout: "auth" });
+<script setup lang="ts">
+import { toast } from "vue-sonner";
+import { useAuth } from "~/composables/useAuth";
+import BaseButton from "~/components/BaseButton.vue";
+import { ref } from "vue";
+import { useRouter } from "vue-router";
+definePageMeta({ layout: false });
+const router = useRouter();
+const {
+  register,
+  isLoading,
+  fieldErrors,
+  clearError,
+  validateField,
+  validateForm,
+} = useAuth();
 
-// Récupération des outils métier
-const { register, isLoading, globalError, fieldErrors } = useAuth();
-
-// Typage strict du formulaire
-const form = ref<RegisterPayload>({
-  name: "",
-  email: "",
-  password: "",
-});
-
-// Validation temps réel : nettoie les erreurs de champ à chaque saisie
-watch(
-  form,
-  () => {
-    if (globalError.value) globalError.value = "";
-    if (fieldErrors.value.name) delete fieldErrors.value.name;
-    if (fieldErrors.value.email) delete fieldErrors.value.email;
-    if (fieldErrors.value.password) delete fieldErrors.value.password;
-  },
-  { deep: true }
-);
+const form = ref<RegisterPayload>({ name: "", email: "", password: "" });
 
 const onRegister = async () => {
-  // register() doit retourner le rôle (voir mise à jour du composable)
-  const role = await register(form.value);
+  // 1. Validation de sécurité avant soumission
+  if (!validateForm(form.value)) {
+    toast.error("Veuillez corriger les erreurs avant de valider.");
+    return;
+  }
 
-  if (role) {
-    // Redirection dynamique basée sur le rôle reçu de l'API
-    if (role === "admin") {
-      await navigateTo("/admin/dashboard");
-    } else {
-      await navigateTo("/dashboard");
+  // 2. Appel API
+  try {
+    const role = await register(form.value);
+    if (role) {
+      toast.success("Compte créé avec succès !");
+      router.push("/dashboard");
     }
+  } catch (err: any) {
+    // Les erreurs serveurs sont traitées dans le composable via handleApiError
   }
 };
 </script>

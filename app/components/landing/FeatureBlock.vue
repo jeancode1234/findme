@@ -28,7 +28,8 @@
   </section>
 </template>
 
-<script setup lang="typescript">
+<script setup lang="ts">
+import { defineProps } from "vue";
 defineProps({
   badge: { type: String, default: "" },
   reverse: { type: Boolean, default: false },

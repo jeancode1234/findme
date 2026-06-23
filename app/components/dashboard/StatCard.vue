@@ -5,9 +5,15 @@
     </p>
     <div class="flex justify-between items-end">
       <h3 class="text-3xl font-extrabold text-slate-900">{{ value }}</h3>
+
       <span
         v-if="sub"
-        class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full"
+        class="text-[10px] font-bold px-2 py-1 rounded-full"
+        :class="
+          variant === 'neutral'
+            ? 'bg-slate-100 text-slate-600'
+            : 'bg-emerald-50 text-emerald-600'
+        "
       >
         {{ sub }}
       </span>
@@ -16,9 +22,15 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
-  label: string;
-  value: string | number;
-  sub?: string;
-}>();
+withDefaults(
+  defineProps<{
+    label: string;
+    value: string | number;
+    sub?: string;
+    variant?: "emerald" | "neutral"; // Permet de varier le style
+  }>(),
+  {
+    variant: "emerald",
+  }
+);
 </script>

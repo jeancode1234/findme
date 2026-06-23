@@ -87,7 +87,7 @@
   </div>
 </template>
 
-<script setup lang="typescript">
+<script setup lang="ts">
 definePageMeta({
   layout: "public",
 });

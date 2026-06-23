@@ -6,6 +6,7 @@
     <h2 class="text-3xl font-extrabold text-slate-900 dark:text-white mb-2">
       Vision Technologique
     </h2>
+
     <p class="text-slate-500 max-w-2xl mx-auto mb-12 text-sm">
       Notre infrastructure repose sur trois piliers fondamentaux pour
       interconnecter l'écosystème de navigation africain au service d'une
@@ -23,13 +24,17 @@
             : 'border-slate-100/50 dark:border-slate-800'
         "
       >
-        <div class="text-2xl mb-4" aria-hidden="true">{{ pillar.icon }}</div>
+        <div class="text-2xl mb-4" aria-hidden="true">
+          {{ pillar.icon }}
+        </div>
+
         <h3
           class="font-bold text-lg mb-2"
           :class="pillar.highlight ? 'text-emerald-600' : 'dark:text-white'"
         >
           {{ pillar.title }}
         </h3>
+
         <p class="text-slate-500 text-sm leading-relaxed">
           {{ pillar.description }}
         </p>
@@ -38,7 +43,7 @@
   </section>
 </template>
 
-<script setup lang="typescript">
+<script setup lang="ts">
 const pillars = [
   {
     icon: "🏦",

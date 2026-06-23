@@ -1,37 +1,56 @@
 // nuxt.config.ts
 export default defineNuxtConfig({
-  ssr: true, // Obligatoire pour le référencement SEO et la performance
+  // Rendu côté serveur pour le SEO et les performances
+  ssr: true,
 
-  modules: ["@nuxtjs/tailwindcss", "@vueuse/nuxt",'vue-sonner/nuxt'],
+  // Modules Nuxt
+  modules: ["@nuxtjs/tailwindcss", "@vueuse/nuxt", "vue-sonner/nuxt"],
+
+  // Variables d'environnement
   runtimeConfig: {
     public: {
-      // URL par défaut pointant vers votre Mock Server Postman [cite: 1]
       apiBaseUrl:
         process.env.NUXT_PUBLIC_API_BASE_URL ||
         "https://your-mock-server-url.pstmn.io/api",
     },
   },
 
+  // Configuration globale de l'application
   app: {
     head: {
       title: "findMe – Géolocalisation & Adressage Urbain Intelligent",
+
       meta: [
-        { charset: "utf-8" },
+        {
+          charset: "utf-8",
+        },
         {
           name: "viewport",
           content:
             "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
-        }, // Mobile-first strict [cite: 33, 49]
+        },
         {
           name: "description",
           content:
-            "Créez, cartographiez et exportez vos adresses numériques normalisées en Afrique avec GeoLink Africa.",
+            "Créez, cartographiez et exportez vos adresses numériques normalisées en Afrique avec findMe.",
         },
       ],
+
       htmlAttrs: {
-        lang: "fr", // Gestion de la sémantique de base [cite: 30, 33, 50]
+        lang: "fr",
       },
     },
+  },
+
+  // Configuration TypeScript
+  typescript: {
+    strict: true,
+    typeCheck: false,
+  },
+
+  // Outils de développement
+  devtools: {
+    enabled: true,
   },
 
   compatibilityDate: "2026-05-01",

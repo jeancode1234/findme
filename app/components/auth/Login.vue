@@ -4,64 +4,7 @@
   >
     <div
       class="hidden lg:flex lg:col-span-5 relative bg-slate-950 p-12 flex-col justify-between overflow-hidden"
-    >
-      <div
-        class="absolute inset-0 bg-[url('/images/urban-background.jpg')] bg-cover bg-center opacity-40 mix-blend-luminosity"
-      ></div>
-      <div
-        class="absolute inset-0 bg-gradient-to-b from-brand/60 to-slate-950/90 z-0"
-      ></div>
-
-      <div class="relative z-10">
-        <NuxtLink
-          to="/"
-          class="text-2xl font-extrabold text-white flex items-center gap-2"
-        >
-          <span class="text-emerald-400">📍</span> findMe
-        </NuxtLink>
-        <h2
-          class="text-4xl font-extrabold text-white mt-16 leading-tight max-w-sm"
-        >
-          Precision Digital Addressing for everyone.
-        </h2>
-      </div>
-
-      <div
-        class="relative z-10 max-w-sm bg-white/10 backdrop-blur-md p-6 rounded-2xl border border-white/10 shadow-lg"
-      >
-        <span
-          class="text-xs font-bold tracking-wider text-emerald-400 block mb-2 uppercase"
-          >🛡️ TECHNOLOGIE GEOLINK</span
-        >
-        <p class="text-xs text-slate-200 leading-relaxed">
-          Rejoignez des milliers d'entrepreneurs et de citoyens au Cameroun
-          utilisant findMe pour localiser l'impossible.
-        </p>
-      </div>
-
-      <div class="relative z-10 flex items-center gap-3">
-        <div class="flex -space-x-3">
-          <div
-            class="w-8 h-8 rounded-full bg-slate-300 border-2 border-slate-950 flex items-center justify-center text-[10px] font-bold text-slate-800"
-          >
-            JD
-          </div>
-          <div
-            class="w-8 h-8 rounded-full bg-emerald-400 border-2 border-slate-950 flex items-center justify-center text-[10px] font-bold text-slate-900"
-          >
-            ME
-          </div>
-          <div
-            class="w-8 h-8 rounded-full bg-orange-300 border-2 border-slate-950 flex items-center justify-center text-[10px] font-bold text-slate-800"
-          >
-            AS
-          </div>
-        </div>
-        <p class="text-xs text-slate-400 font-medium">
-          Expertise européenne et africaine approuvée.
-        </p>
-      </div>
-    </div>
+    ></div>
 
     <div
       class="col-span-1 lg:col-span-7 flex flex-col justify-center px-6 sm:px-16 lg:px-24 py-12"
@@ -73,13 +16,6 @@
         <p class="text-slate-500 dark:text-slate-400 text-sm mb-8">
           Connectez-vous pour accéder à vos adresses.
         </p>
-
-        <div
-          v-if="globalError"
-          class="mb-6 p-4 bg-red-50 dark:bg-red-950/30 border-l-4 border-red-500 rounded-xl text-sm text-red-600 dark:text-red-400"
-        >
-          {{ globalError }}
-        </div>
 
         <form @submit.prevent="onSubmit" class="space-y-5">
           <div>
@@ -100,11 +36,9 @@
                 :class="{ 'border-red-500': fieldErrors.email }"
               />
             </div>
-            <span
-              v-if="fieldErrors.email"
-              class="text-xs font-semibold text-red-500 mt-1 block"
-              >{{ fieldErrors.email }}</span
-            >
+            <p v-if="fieldErrors.email" class="text-xs text-red-500 mt-1">
+              {{ fieldErrors.email }}
+            </p>
           </div>
 
           <div>
@@ -132,11 +66,9 @@
                 {{ showPassword ? "👁️" : "🙈" }}
               </button>
             </div>
-            <span
-              v-if="fieldErrors.password"
-              class="text-xs font-semibold text-red-500 mt-1 block"
-              >{{ fieldErrors.password }}</span
-            >
+            <p v-if="fieldErrors.password" class="text-xs text-red-500 mt-1">
+              {{ fieldErrors.password }}
+            </p>
           </div>
 
           <BaseButton
@@ -147,47 +79,45 @@
             Se connecter ➔
           </BaseButton>
         </form>
+
+        <p class="text-center text-xs text-slate-500 mt-6">
+          Pas de compte ?
+          <NuxtLink to="/auth/register" class="text-emerald-600 font-bold"
+            >Inscrivez-vous</NuxtLink
+          >
+        </p>
       </div>
     </div>
   </div>
 </template>
 
-<script setup>
-import { ref, watch } from "vue";
+<script setup lang="ts">
+import { toast } from "vue-sonner";
 import { useAuth } from "~/composables/useAuth";
+import type { LoginPayload } from "~/types/auth"; // <--- AJOUTEZ CET IMPORT
 
 definePageMeta({ layout: false });
 
-const { login, isLoading, globalError, fieldErrors } = useAuth();
+const { login, isLoading, fieldErrors } = useAuth();
 const showPassword = ref(false);
 
+// Typage explicite
 const credentials = ref<LoginPayload>({
   email: "",
   password: "",
 });
 
-// Validation temps réel
-watch(
-  credentials,
-  () => {
-    if (globalError.value) globalError.value = "";
-    if (fieldErrors.value.email) delete fieldErrors.value.email;
-    if (fieldErrors.value.password) delete fieldErrors.value.password;
-  },
-  { deep: true }
-);
-
 const onSubmit = async () => {
-  // La fonction login doit retourner le rôle de l'utilisateur
-  const role = await login(credentials.value);
-  
-  if (role) {
-    // Redirection dynamique selon le rôle
-    if (role === 'admin') {
-      await navigateTo('/admin/dashboard');
-    } else {
-      await navigateTo('/dashboard');
+  try {
+    const role = await login(credentials.value);
+
+    if (role) {
+      toast.success("Connexion réussie !");
+      await navigateTo(role === "admin" ? "/admin/dashboard" : "/dashboard");
     }
+  } catch (error: any) {
+    // La gestion d'erreur est déjà faite dans useAuth via toast.error
+    // On peut simplement logger ici si besoin
   }
 };
 </script>

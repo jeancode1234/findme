@@ -31,8 +31,18 @@
     </p>
 
     <div class="mt-6 pt-4 border-t flex justify-between items-center">
-      <button class="text-slate-400 hover:text-slate-900">🔗</button>
-      <button class="text-xs font-bold text-slate-700 flex items-center gap-1">
+      <button
+        @click="shareAddress(address.id, 'whatsapp')"
+        class="text-slate-400 hover:text-emerald-600 transition"
+        title="Partager"
+      >
+        🔗
+      </button>
+
+      <button
+        @click="exportAddressPdf(address.id)"
+        class="text-xs font-bold text-slate-700 flex items-center gap-1 hover:text-emerald-600 transition"
+      >
         📄 Télécharger PDF
       </button>
     </div>
@@ -40,8 +50,13 @@
 </template>
 
 <script setup lang="ts">
-import { Address } from "~/types/address"; // Assurez-vous que ce chemin est correct
+import { useAddress } from "~/composables/useAddress";
+import type { Address } from "~/types/address";
+
 defineProps<{
-  address: Address; // Utilise l'interface définie précédemment
+  address: Address;
 }>();
+
+// On récupère les fonctions d'action du composable
+const { shareAddress, exportAddressPdf } = useAddress();
 </script>

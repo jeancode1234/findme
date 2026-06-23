@@ -34,7 +34,9 @@
   </section>
 </template>
 
-<script setup lang="typescript">
+<script setup lang="ts">
+import BaseButton from "~/components/BaseButton.vue";
+import { defineEmits } from "vue";
 defineEmits(["cta-click"]);
 
 const useCases = [
